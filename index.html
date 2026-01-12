@@ -113,9 +113,6 @@
             .main-grid {
                 grid-template-columns: 1fr;
             }
-            h1 {
-                font-size: 1.75rem;
-            }
         }
 
         .panel {
@@ -219,7 +216,20 @@
             transition: all 0.2s ease;
         }
 
-        input:focus, select:focus {
+        textarea {
+            width: 100%;
+            padding: 0.75rem;
+            background: var(--accent-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            color: var(--text-primary);
+            font-family: 'Roboto Mono', monospace;
+            font-size: 0.9rem;
+            resize: vertical;
+            transition: all 0.2s ease;
+        }
+
+        input:focus, select:focus, textarea:focus {
             outline: none;
             border-color: var(--accent);
             box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
@@ -256,12 +266,6 @@
             display: grid;
             grid-template-columns: repeat(3, 1fr);
             gap: 0.75rem;
-        }
-
-        @media (max-width: 768px) {
-            .input-grid {
-                grid-template-columns: 1fr;
-            }
         }
 
         .recipe-list {
@@ -439,6 +443,31 @@
             margin-top: 0.25rem;
             font-style: italic;
         }
+
+        .backup-controls {
+            display: flex;
+            gap: 0.75rem;
+            justify-content: center;
+            margin-top: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: white;
+            border: 1px solid var(--success);
+        }
+
+        .btn-success:hover {
+            background: #059669;
+            border-color: #059669;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(16, 185, 129, 0.3);
+        }
     </style>
 </head>
 <body>
@@ -464,8 +493,15 @@
                 primer: 1,
                 powder: '',
                 shot: '',
-                wad: 1
+                wad: 1,
+                hullBrand: '',
+                primerBrand: '',
+                powderBrand: '',
+                shotBrand: '',
+                wadBrand: '',
+                notes: ''
             });
+            const [editingRecipe, setEditingRecipe] = useState(null);
 
             // Load recipes from localStorage on mount
             useEffect(() => {
@@ -544,25 +580,67 @@
                 }
 
                 const recipe = {
-                    id: Date.now(),
+                    id: editingRecipe ? editingRecipe.id : Date.now(),
                     name: newRecipe.name,
                     hull: parseFloat(newRecipe.hull) || 1,
                     primer: parseFloat(newRecipe.primer) || 1,
                     powder: parseFloat(newRecipe.powder),
                     shot: parseFloat(newRecipe.shot),
-                    wad: parseFloat(newRecipe.wad) || 1
+                    wad: parseFloat(newRecipe.wad) || 1,
+                    hullBrand: newRecipe.hullBrand || '',
+                    primerBrand: newRecipe.primerBrand || '',
+                    powderBrand: newRecipe.powderBrand || '',
+                    shotBrand: newRecipe.shotBrand || '',
+                    wadBrand: newRecipe.wadBrand || '',
+                    notes: newRecipe.notes || ''
                 };
 
-                setRecipes([...recipes, recipe]);
+                if (editingRecipe) {
+                    // Update existing recipe
+                    setRecipes(recipes.map(r => r.id === editingRecipe.id ? recipe : r));
+                    if (selectedRecipe?.id === editingRecipe.id) {
+                        setSelectedRecipe(recipe);
+                    }
+                } else {
+                    // Add new recipe
+                    setRecipes([...recipes, recipe]);
+                }
+
                 setNewRecipe({
                     name: '',
                     hull: 1,
                     primer: 1,
                     powder: '',
                     shot: '',
-                    wad: 1
+                    wad: 1,
+                    hullBrand: '',
+                    primerBrand: '',
+                    powderBrand: '',
+                    shotBrand: '',
+                    wadBrand: '',
+                    notes: ''
                 });
+                setEditingRecipe(null);
                 setShowModal(false);
+            };
+
+            const handleEditRecipe = (recipe) => {
+                setEditingRecipe(recipe);
+                setNewRecipe({
+                    name: recipe.name,
+                    hull: recipe.hull,
+                    primer: recipe.primer,
+                    powder: recipe.powder,
+                    shot: recipe.shot,
+                    wad: recipe.wad,
+                    hullBrand: recipe.hullBrand || '',
+                    primerBrand: recipe.primerBrand || '',
+                    powderBrand: recipe.powderBrand || '',
+                    shotBrand: recipe.shotBrand || '',
+                    wadBrand: recipe.wadBrand || '',
+                    notes: recipe.notes || ''
+                });
+                setShowModal(true);
             };
 
             const handleDeleteRecipe = (id) => {
@@ -572,6 +650,57 @@
                         setSelectedRecipe(null);
                     }
                 }
+            };
+
+            const handleExportRecipes = () => {
+                if (recipes.length === 0) {
+                    alert('No recipes to export!');
+                    return;
+                }
+                
+                const dataStr = JSON.stringify(recipes, null, 2);
+                const dataBlob = new Blob([dataStr], { type: 'application/json' });
+                const url = URL.createObjectURL(dataBlob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `reloading-recipes-${new Date().toISOString().split('T')[0]}.json`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+            };
+
+            const handleImportRecipes = (event) => {
+                const file = event.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const importedRecipes = JSON.parse(e.target.result);
+                        if (!Array.isArray(importedRecipes)) {
+                            alert('Invalid recipe file format!');
+                            return;
+                        }
+                        
+                        // Merge imported recipes with existing ones, avoiding duplicates by ID
+                        const existingIds = new Set(recipes.map(r => r.id));
+                        const newRecipes = importedRecipes.filter(r => !existingIds.has(r.id));
+                        
+                        if (newRecipes.length === 0) {
+                            alert('All recipes from this file already exist!');
+                            return;
+                        }
+                        
+                        setRecipes([...recipes, ...newRecipes]);
+                        alert(`Successfully imported ${newRecipes.length} recipe(s)!`);
+                    } catch (error) {
+                        alert('Error reading recipe file. Please make sure it\'s a valid backup file.');
+                    }
+                };
+                reader.readAsText(file);
+                // Reset the input so the same file can be selected again
+                event.target.value = '';
             };
 
             const handleCostChange = (ingredient, field, value) => {
@@ -589,6 +718,24 @@
                     <header>
                         <h1>Reloading Cost Calculator</h1>
                         <div className="subtitle">Precision Ammunition Cost Analysis</div>
+                        <div className="backup-controls">
+                            <button 
+                                className="btn btn-success btn-small" 
+                                onClick={handleExportRecipes}
+                                disabled={recipes.length === 0}
+                            >
+                                ↓ Export Recipes
+                            </button>
+                            <label className="btn btn-secondary btn-small" style={{margin: 0, cursor: 'pointer'}}>
+                                ↑ Import Recipes
+                                <input 
+                                    type="file" 
+                                    accept=".json"
+                                    onChange={handleImportRecipes}
+                                    className="file-input"
+                                />
+                            </label>
+                        </div>
                     </header>
 
                     <div className="main-grid">
@@ -617,9 +764,19 @@
                                                 <div className="recipe-name">{recipe.name}</div>
                                                 <div className="info-text">
                                                     {recipe.powder}gr powder, {recipe.shot}oz shot
+                                                    {recipe.notes && <span> • {recipe.notes.substring(0, 30)}{recipe.notes.length > 30 ? '...' : ''}</span>}
                                                 </div>
                                             </div>
                                             <div className="recipe-actions">
+                                                <button 
+                                                    className="btn btn-secondary btn-small"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleEditRecipe(recipe);
+                                                    }}
+                                                >
+                                                    Edit
+                                                </button>
                                                 <button 
                                                     className="btn btn-secondary btn-small"
                                                     onClick={(e) => {
@@ -647,9 +804,33 @@
                                         Selected: {selectedRecipe.name}
                                     </p>
                                     
+                                    {selectedRecipe.notes && (
+                                        <div style={{
+                                            background: 'var(--accent-bg)',
+                                            padding: '0.75rem',
+                                            borderRadius: '4px',
+                                            marginBottom: '1rem',
+                                            border: '1px solid var(--border-color)'
+                                        }}>
+                                            <div style={{
+                                                fontSize: '0.75rem',
+                                                color: 'var(--text-secondary)',
+                                                textTransform: 'uppercase',
+                                                letterSpacing: '0.05em',
+                                                marginBottom: '0.5rem'
+                                            }}>Notes:</div>
+                                            <div style={{fontSize: '0.85rem', color: 'var(--text-primary)'}}>
+                                                {selectedRecipe.notes}
+                                            </div>
+                                        </div>
+                                    )}
+                                    
                                     {/* Hull */}
                                     <div className="ingredient-row">
-                                        <div className="ingredient-header">Hull / Case</div>
+                                        <div className="ingredient-header">
+                                            Hull / Case
+                                            {selectedRecipe.hullBrand && <span style={{fontWeight: 'normal', fontSize: '0.8rem'}}> ({selectedRecipe.hullBrand})</span>}
+                                        </div>
                                         <div className="input-grid">
                                             <div className="form-group">
                                                 <label>Cost Paid ($)</label>
@@ -684,7 +865,10 @@
 
                                     {/* Primer */}
                                     <div className="ingredient-row">
-                                        <div className="ingredient-header">Primer</div>
+                                        <div className="ingredient-header">
+                                            Primer
+                                            {selectedRecipe.primerBrand && <span style={{fontWeight: 'normal', fontSize: '0.8rem'}}> ({selectedRecipe.primerBrand})</span>}
+                                        </div>
                                         <div className="input-grid">
                                             <div className="form-group">
                                                 <label>Cost Paid ($)</label>
@@ -719,7 +903,10 @@
 
                                     {/* Powder */}
                                     <div className="ingredient-row">
-                                        <div className="ingredient-header">Powder</div>
+                                        <div className="ingredient-header">
+                                            Powder
+                                            {selectedRecipe.powderBrand && <span style={{fontWeight: 'normal', fontSize: '0.8rem'}}> ({selectedRecipe.powderBrand})</span>}
+                                        </div>
                                         <div className="input-grid">
                                             <div className="form-group">
                                                 <label>Cost Paid ($)</label>
@@ -757,7 +944,10 @@
 
                                     {/* Shot */}
                                     <div className="ingredient-row">
-                                        <div className="ingredient-header">Shot / Bullet</div>
+                                        <div className="ingredient-header">
+                                            Shot / Bullet
+                                            {selectedRecipe.shotBrand && <span style={{fontWeight: 'normal', fontSize: '0.8rem'}}> ({selectedRecipe.shotBrand})</span>}
+                                        </div>
                                         <div className="input-grid">
                                             <div className="form-group">
                                                 <label>Cost Paid ($)</label>
@@ -795,7 +985,10 @@
 
                                     {/* Wad */}
                                     <div className="ingredient-row">
-                                        <div className="ingredient-header">Wad</div>
+                                        <div className="ingredient-header">
+                                            Wad
+                                            {selectedRecipe.wadBrand && <span style={{fontWeight: 'normal', fontSize: '0.8rem'}}> ({selectedRecipe.wadBrand})</span>}
+                                        </div>
                                         <div className="input-grid">
                                             <div className="form-group">
                                                 <label>Cost Paid ($)</label>
@@ -865,8 +1058,11 @@
                         <div className="modal-overlay" onClick={() => setShowModal(false)}>
                             <div className="modal" onClick={(e) => e.stopPropagation()}>
                                 <div className="modal-header">
-                                    <h3 className="modal-title">New Recipe</h3>
-                                    <button className="close-btn" onClick={() => setShowModal(false)}>×</button>
+                                    <h3 className="modal-title">{editingRecipe ? 'Edit Recipe' : 'New Recipe'}</h3>
+                                    <button className="close-btn" onClick={() => {
+                                        setShowModal(false);
+                                        setEditingRecipe(null);
+                                    }}>×</button>
                                 </div>
                                 
                                 <div className="form-group">
@@ -890,6 +1086,16 @@
                                 </div>
 
                                 <div className="form-group">
+                                    <label>Hull/Case Brand (optional)</label>
+                                    <input 
+                                        type="text"
+                                        placeholder="e.g., Winchester, Federal, Remington"
+                                        value={newRecipe.hullBrand}
+                                        onChange={(e) => setNewRecipe({...newRecipe, hullBrand: e.target.value})}
+                                    />
+                                </div>
+
+                                <div className="form-group">
                                     <label>Primer per Round</label>
                                     <input 
                                         type="number"
@@ -897,6 +1103,16 @@
                                         onChange={(e) => setNewRecipe({...newRecipe, primer: e.target.value})}
                                     />
                                     <div className="info-text">Typically 1 per round</div>
+                                </div>
+
+                                <div className="form-group">
+                                    <label>Primer Brand (optional)</label>
+                                    <input 
+                                        type="text"
+                                        placeholder="e.g., CCI, Federal, Winchester"
+                                        value={newRecipe.primerBrand}
+                                        onChange={(e) => setNewRecipe({...newRecipe, primerBrand: e.target.value})}
+                                    />
                                 </div>
 
                                 <div className="form-group">
@@ -912,6 +1128,16 @@
                                 </div>
 
                                 <div className="form-group">
+                                    <label>Powder Brand (optional)</label>
+                                    <input 
+                                        type="text"
+                                        placeholder="e.g., Hodgdon, IMR, Alliant"
+                                        value={newRecipe.powderBrand}
+                                        onChange={(e) => setNewRecipe({...newRecipe, powderBrand: e.target.value})}
+                                    />
+                                </div>
+
+                                <div className="form-group">
                                     <label>Shot/Bullet (ounces) *</label>
                                     <input 
                                         type="number"
@@ -924,6 +1150,16 @@
                                 </div>
 
                                 <div className="form-group">
+                                    <label>Shot/Bullet Brand (optional)</label>
+                                    <input 
+                                        type="text"
+                                        placeholder="e.g., Lawrence, Hornady, Sierra"
+                                        value={newRecipe.shotBrand}
+                                        onChange={(e) => setNewRecipe({...newRecipe, shotBrand: e.target.value})}
+                                    />
+                                </div>
+
+                                <div className="form-group">
                                     <label>Wad per Round</label>
                                     <input 
                                         type="number"
@@ -933,12 +1169,44 @@
                                     <div className="info-text">Typically 1 per round</div>
                                 </div>
 
+                                <div className="form-group">
+                                    <label>Wad Brand (optional)</label>
+                                    <input 
+                                        type="text"
+                                        placeholder="e.g., WAA12, CB1100, Versalite"
+                                        value={newRecipe.wadBrand}
+                                        onChange={(e) => setNewRecipe({...newRecipe, wadBrand: e.target.value})}
+                                    />
+                                </div>
+
+                                <div className="form-group">
+                                    <label>Notes / Comments (optional)</label>
+                                    <textarea 
+                                        placeholder="e.g., Competition load, works well in cold weather, consistent accuracy"
+                                        value={newRecipe.notes}
+                                        onChange={(e) => setNewRecipe({...newRecipe, notes: e.target.value})}
+                                        rows="3"
+                                        style={{
+                                            width: '100%',
+                                            padding: '0.75rem',
+                                            background: 'var(--accent-bg)',
+                                            border: '1px solid var(--border-color)',
+                                            borderRadius: '4px',
+                                            color: 'var(--text-primary)',
+                                            fontFamily: "'Roboto Mono', monospace",
+                                            fontSize: '0.9rem',
+                                            resize: 'vertical'
+                                        }}
+                                    />
+                                    <div className="info-text">Add any additional notes about this recipe</div>
+                                </div>
+
                                 <button 
                                     className="btn btn-primary" 
                                     onClick={handleSaveRecipe}
                                     style={{width: '100%', marginTop: '1rem'}}
                                 >
-                                    Save Recipe
+                                    {editingRecipe ? 'Update Recipe' : 'Save Recipe'}
                                 </button>
                             </div>
                         </div>
