@@ -1,0 +1,953 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reloading Cost Calculator</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&family=Roboto+Mono:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-bg: #0a0e14;
+            --secondary-bg: #151a23;
+            --accent-bg: #1a2332;
+            --border-color: #2d3748;
+            --accent: #ff6b35;
+            --accent-hover: #ff8555;
+            --text-primary: #e8eaed;
+            --text-secondary: #9ca3af;
+            --text-muted: #6b7280;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --grid-pattern: repeating-linear-gradient(
+                0deg,
+                transparent,
+                transparent 1px,
+                rgba(45, 55, 72, 0.3) 1px,
+                rgba(45, 55, 72, 0.3) 2px
+            );
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Roboto Mono', monospace;
+            background: var(--primary-bg);
+            color: var(--text-primary);
+            line-height: 1.6;
+            min-height: 100vh;
+            background-image: 
+                var(--grid-pattern),
+                radial-gradient(circle at 20% 30%, rgba(255, 107, 53, 0.05) 0%, transparent 50%),
+                radial-gradient(circle at 80% 70%, rgba(16, 185, 129, 0.03) 0%, transparent 50%);
+            background-size: 20px 20px, 100% 100%, 100% 100%;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 3rem;
+            padding: 2rem 0;
+            border-bottom: 2px solid var(--border-color);
+            position: relative;
+        }
+
+        h1 {
+            font-family: 'Courier Prime', monospace;
+            font-size: 2.5rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            margin-bottom: 0.5rem;
+            color: var(--accent);
+            text-transform: uppercase;
+            animation: slideDown 0.6s ease-out;
+        }
+
+        .subtitle {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            animation: fadeIn 0.8s ease-out 0.2s both;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            animation: fadeIn 0.6s ease-out 0.4s both;
+        }
+
+        @media (max-width: 968px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+            h1 {
+                font-size: 1.75rem;
+            }
+        }
+
+        .panel {
+            background: var(--secondary-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .panel:hover {
+            border-color: var(--accent);
+            box-shadow: 0 6px 12px rgba(255, 107, 53, 0.2);
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .panel-title {
+            font-family: 'Courier Prime', monospace;
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .btn {
+            font-family: 'Roboto Mono', monospace;
+            padding: 0.625rem 1.25rem;
+            border: none;
+            border-radius: 4px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: white;
+            border: 1px solid var(--accent);
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-hover);
+            border-color: var(--accent-hover);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(255, 107, 53, 0.3);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: var(--text-secondary);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-secondary:hover {
+            background: var(--accent-bg);
+            color: var(--text-primary);
+            border-color: var(--accent);
+        }
+
+        .btn-small {
+            padding: 0.375rem 0.75rem;
+            font-size: 0.75rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: 500;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 0.75rem;
+            background: var(--accent-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            color: var(--text-primary);
+            font-family: 'Roboto Mono', monospace;
+            font-size: 0.9rem;
+            transition: all 0.2s ease;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
+        }
+
+        input::placeholder {
+            color: var(--text-muted);
+        }
+
+        .ingredient-row {
+            background: var(--accent-bg);
+            padding: 1rem;
+            border-radius: 4px;
+            margin-bottom: 1rem;
+            border: 1px solid var(--border-color);
+            transition: all 0.2s ease;
+        }
+
+        .ingredient-row:hover {
+            border-color: var(--accent);
+            background: rgba(255, 107, 53, 0.05);
+        }
+
+        .ingredient-header {
+            font-weight: 500;
+            color: var(--accent);
+            margin-bottom: 0.75rem;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .input-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.75rem;
+        }
+
+        @media (max-width: 768px) {
+            .input-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .recipe-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .recipe-item {
+            background: var(--accent-bg);
+            padding: 1rem;
+            border-radius: 4px;
+            margin-bottom: 0.75rem;
+            border: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .recipe-item:hover {
+            border-color: var(--accent);
+            background: rgba(255, 107, 53, 0.05);
+            transform: translateX(4px);
+        }
+
+        .recipe-item.selected {
+            border-color: var(--accent);
+            background: rgba(255, 107, 53, 0.1);
+        }
+
+        .recipe-name {
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .recipe-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .results-panel {
+            grid-column: 1 / -1;
+            background: linear-gradient(135deg, var(--secondary-bg) 0%, var(--accent-bg) 100%);
+            border: 2px solid var(--accent);
+        }
+
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+        }
+
+        .result-card {
+            background: var(--primary-bg);
+            padding: 1.5rem;
+            border-radius: 4px;
+            border: 1px solid var(--border-color);
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .result-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 16px rgba(255, 107, 53, 0.2);
+        }
+
+        .result-label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 0.5rem;
+        }
+
+        .result-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--accent);
+            font-family: 'Courier Prime', monospace;
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(10, 14, 20, 0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            animation: fadeIn 0.2s ease-out;
+        }
+
+        .modal {
+            background: var(--secondary-bg);
+            border: 2px solid var(--accent);
+            border-radius: 8px;
+            padding: 2rem;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            animation: slideDown 0.3s ease-out;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-title {
+            font-family: 'Courier Prime', monospace;
+            font-size: 1.5rem;
+            color: var(--accent);
+            text-transform: uppercase;
+        }
+
+        .close-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .close-btn:hover {
+            color: var(--accent);
+            transform: rotate(90deg);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: var(--text-muted);
+        }
+
+        .empty-state-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--primary-bg);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--accent);
+        }
+
+        .info-text {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 0.25rem;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        function ReloadingCalculator() {
+            const [recipes, setRecipes] = useState([]);
+            const [selectedRecipe, setSelectedRecipe] = useState(null);
+            const [showModal, setShowModal] = useState(false);
+            const [costs, setCosts] = useState({
+                hull: { paid: '', quantity: '', unit: 'each' },
+                primer: { paid: '', quantity: '', unit: 'each' },
+                powder: { paid: '', quantity: '', unit: 'lb' },
+                shot: { paid: '', quantity: '', unit: 'lb' },
+                wad: { paid: '', quantity: '', unit: 'each' }
+            });
+            const [newRecipe, setNewRecipe] = useState({
+                name: '',
+                hull: 1,
+                primer: 1,
+                powder: '',
+                shot: '',
+                wad: 1
+            });
+
+            // Load recipes from localStorage on mount
+            useEffect(() => {
+                const saved = localStorage.getItem('reloadingRecipes');
+                if (saved) {
+                    setRecipes(JSON.parse(saved));
+                }
+            }, []);
+
+            // Save recipes to localStorage whenever they change
+            useEffect(() => {
+                if (recipes.length > 0) {
+                    localStorage.setItem('reloadingRecipes', JSON.stringify(recipes));
+                }
+            }, [recipes]);
+
+            const calculateUnitCost = (paid, quantity) => {
+                const paidNum = parseFloat(paid);
+                const qtyNum = parseFloat(quantity);
+                if (isNaN(paidNum) || isNaN(qtyNum) || qtyNum === 0) return 0;
+                return paidNum / qtyNum;
+            };
+
+            const convertToBaseUnit = (value, fromUnit, toUnit) => {
+                // Convert pounds to grains (1 lb = 7000 grains)
+                if (fromUnit === 'lb' && toUnit === 'grains') {
+                    return value * 7000;
+                }
+                // Convert pounds to ounces (1 lb = 16 oz)
+                if (fromUnit === 'lb' && toUnit === 'oz') {
+                    return value * 16;
+                }
+                return value;
+            };
+
+            const calculateRoundCost = () => {
+                if (!selectedRecipe) return 0;
+
+                // Hull cost (1 per round)
+                const hullUnitCost = calculateUnitCost(costs.hull.paid, costs.hull.quantity);
+                const hullCost = hullUnitCost * selectedRecipe.hull;
+
+                // Primer cost (1 per round)
+                const primerUnitCost = calculateUnitCost(costs.primer.paid, costs.primer.quantity);
+                const primerCost = primerUnitCost * selectedRecipe.primer;
+
+                // Powder cost (purchased in lbs or container, used in grains)
+                const powderUnitCost = calculateUnitCost(costs.powder.paid, costs.powder.quantity);
+                const powderPerGrain = powderUnitCost / convertToBaseUnit(1, costs.powder.unit, 'grains');
+                const powderCost = powderPerGrain * parseFloat(selectedRecipe.powder || 0);
+
+                // Shot cost (purchased in lbs, used in oz)
+                const shotUnitCost = calculateUnitCost(costs.shot.paid, costs.shot.quantity);
+                const shotPerOz = shotUnitCost / convertToBaseUnit(1, costs.shot.unit, 'oz');
+                const shotCost = shotPerOz * parseFloat(selectedRecipe.shot || 0);
+
+                // Wad cost (1 per round)
+                const wadUnitCost = calculateUnitCost(costs.wad.paid, costs.wad.quantity);
+                const wadCost = wadUnitCost * selectedRecipe.wad;
+
+                return hullCost + primerCost + powderCost + shotCost + wadCost;
+            };
+
+            const roundCost = calculateRoundCost();
+            const box25Cost = roundCost * 25;
+            const box100Cost = roundCost * 100;
+
+            const handleSaveRecipe = () => {
+                if (!newRecipe.name.trim()) {
+                    alert('Please enter a recipe name');
+                    return;
+                }
+                if (!newRecipe.powder || !newRecipe.shot) {
+                    alert('Please enter powder and shot amounts');
+                    return;
+                }
+
+                const recipe = {
+                    id: Date.now(),
+                    name: newRecipe.name,
+                    hull: parseFloat(newRecipe.hull) || 1,
+                    primer: parseFloat(newRecipe.primer) || 1,
+                    powder: parseFloat(newRecipe.powder),
+                    shot: parseFloat(newRecipe.shot),
+                    wad: parseFloat(newRecipe.wad) || 1
+                };
+
+                setRecipes([...recipes, recipe]);
+                setNewRecipe({
+                    name: '',
+                    hull: 1,
+                    primer: 1,
+                    powder: '',
+                    shot: '',
+                    wad: 1
+                });
+                setShowModal(false);
+            };
+
+            const handleDeleteRecipe = (id) => {
+                if (confirm('Are you sure you want to delete this recipe?')) {
+                    setRecipes(recipes.filter(r => r.id !== id));
+                    if (selectedRecipe?.id === id) {
+                        setSelectedRecipe(null);
+                    }
+                }
+            };
+
+            const handleCostChange = (ingredient, field, value) => {
+                setCosts({
+                    ...costs,
+                    [ingredient]: {
+                        ...costs[ingredient],
+                        [field]: value
+                    }
+                });
+            };
+
+            return (
+                <div className="container">
+                    <header>
+                        <h1>Reloading Cost Calculator</h1>
+                        <div className="subtitle">Precision Ammunition Cost Analysis</div>
+                    </header>
+
+                    <div className="main-grid">
+                        {/* Recipe Selection Panel */}
+                        <div className="panel">
+                            <div className="panel-header">
+                                <h2 className="panel-title">Saved Recipes</h2>
+                                <button className="btn btn-primary btn-small" onClick={() => setShowModal(true)}>
+                                    + New Recipe
+                                </button>
+                            </div>
+                            <div className="recipe-list">
+                                {recipes.length === 0 ? (
+                                    <div className="empty-state">
+                                        <div className="empty-state-icon">📋</div>
+                                        <p>No recipes saved yet.<br/>Create your first recipe to get started.</p>
+                                    </div>
+                                ) : (
+                                    recipes.map(recipe => (
+                                        <div 
+                                            key={recipe.id}
+                                            className={`recipe-item ${selectedRecipe?.id === recipe.id ? 'selected' : ''}`}
+                                            onClick={() => setSelectedRecipe(recipe)}
+                                        >
+                                            <div>
+                                                <div className="recipe-name">{recipe.name}</div>
+                                                <div className="info-text">
+                                                    {recipe.powder}gr powder, {recipe.shot}oz shot
+                                                </div>
+                                            </div>
+                                            <div className="recipe-actions">
+                                                <button 
+                                                    className="btn btn-secondary btn-small"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleDeleteRecipe(recipe.id);
+                                                    }}
+                                                >
+                                                    Delete
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Cost Input Panel */}
+                        <div className="panel">
+                            <div className="panel-header">
+                                <h2 className="panel-title">Component Costs</h2>
+                            </div>
+                            {selectedRecipe ? (
+                                <div>
+                                    <p className="info-text" style={{marginBottom: '1rem'}}>
+                                        Selected: {selectedRecipe.name}
+                                    </p>
+                                    
+                                    {/* Hull */}
+                                    <div className="ingredient-row">
+                                        <div className="ingredient-header">Hull / Case</div>
+                                        <div className="input-grid">
+                                            <div className="form-group">
+                                                <label>Cost Paid ($)</label>
+                                                <input 
+                                                    type="number" 
+                                                    step="0.01"
+                                                    placeholder="0.00"
+                                                    value={costs.hull.paid}
+                                                    onChange={(e) => handleCostChange('hull', 'paid', e.target.value)}
+                                                />
+                                            </div>
+                                            <div className="form-group">
+                                                <label>Quantity</label>
+                                                <input 
+                                                    type="number"
+                                                    placeholder="100"
+                                                    value={costs.hull.quantity}
+                                                    onChange={(e) => handleCostChange('hull', 'quantity', e.target.value)}
+                                                />
+                                            </div>
+                                            <div className="form-group">
+                                                <label>Unit</label>
+                                                <select 
+                                                    value={costs.hull.unit}
+                                                    onChange={(e) => handleCostChange('hull', 'unit', e.target.value)}
+                                                >
+                                                    <option value="each">Each</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Primer */}
+                                    <div className="ingredient-row">
+                                        <div className="ingredient-header">Primer</div>
+                                        <div className="input-grid">
+                                            <div className="form-group">
+                                                <label>Cost Paid ($)</label>
+                                                <input 
+                                                    type="number" 
+                                                    step="0.01"
+                                                    placeholder="0.00"
+                                                    value={costs.primer.paid}
+                                                    onChange={(e) => handleCostChange('primer', 'paid', e.target.value)}
+                                                />
+                                            </div>
+                                            <div className="form-group">
+                                                <label>Quantity</label>
+                                                <input 
+                                                    type="number"
+                                                    placeholder="1000"
+                                                    value={costs.primer.quantity}
+                                                    onChange={(e) => handleCostChange('primer', 'quantity', e.target.value)}
+                                                />
+                                            </div>
+                                            <div className="form-group">
+                                                <label>Unit</label>
+                                                <select 
+                                                    value={costs.primer.unit}
+                                                    onChange={(e) => handleCostChange('primer', 'unit', e.target.value)}
+                                                >
+                                                    <option value="each">Each</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Powder */}
+                                    <div className="ingredient-row">
+                                        <div className="ingredient-header">Powder</div>
+                                        <div className="input-grid">
+                                            <div className="form-group">
+                                                <label>Cost Paid ($)</label>
+                                                <input 
+                                                    type="number" 
+                                                    step="0.01"
+                                                    placeholder="0.00"
+                                                    value={costs.powder.paid}
+                                                    onChange={(e) => handleCostChange('powder', 'paid', e.target.value)}
+                                                />
+                                            </div>
+                                            <div className="form-group">
+                                                <label>Quantity</label>
+                                                <input 
+                                                    type="number"
+                                                    step="0.01"
+                                                    placeholder="1"
+                                                    value={costs.powder.quantity}
+                                                    onChange={(e) => handleCostChange('powder', 'quantity', e.target.value)}
+                                                />
+                                            </div>
+                                            <div className="form-group">
+                                                <label>Unit</label>
+                                                <select 
+                                                    value={costs.powder.unit}
+                                                    onChange={(e) => handleCostChange('powder', 'unit', e.target.value)}
+                                                >
+                                                    <option value="lb">Pounds</option>
+                                                    <option value="grains">Grains</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div className="info-text">Recipe uses: {selectedRecipe.powder} grains per round</div>
+                                    </div>
+
+                                    {/* Shot */}
+                                    <div className="ingredient-row">
+                                        <div className="ingredient-header">Shot / Bullet</div>
+                                        <div className="input-grid">
+                                            <div className="form-group">
+                                                <label>Cost Paid ($)</label>
+                                                <input 
+                                                    type="number" 
+                                                    step="0.01"
+                                                    placeholder="0.00"
+                                                    value={costs.shot.paid}
+                                                    onChange={(e) => handleCostChange('shot', 'paid', e.target.value)}
+                                                />
+                                            </div>
+                                            <div className="form-group">
+                                                <label>Quantity</label>
+                                                <input 
+                                                    type="number"
+                                                    step="0.01"
+                                                    placeholder="25"
+                                                    value={costs.shot.quantity}
+                                                    onChange={(e) => handleCostChange('shot', 'quantity', e.target.value)}
+                                                />
+                                            </div>
+                                            <div className="form-group">
+                                                <label>Unit</label>
+                                                <select 
+                                                    value={costs.shot.unit}
+                                                    onChange={(e) => handleCostChange('shot', 'unit', e.target.value)}
+                                                >
+                                                    <option value="lb">Pounds</option>
+                                                    <option value="oz">Ounces</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div className="info-text">Recipe uses: {selectedRecipe.shot} oz per round</div>
+                                    </div>
+
+                                    {/* Wad */}
+                                    <div className="ingredient-row">
+                                        <div className="ingredient-header">Wad</div>
+                                        <div className="input-grid">
+                                            <div className="form-group">
+                                                <label>Cost Paid ($)</label>
+                                                <input 
+                                                    type="number" 
+                                                    step="0.01"
+                                                    placeholder="0.00"
+                                                    value={costs.wad.paid}
+                                                    onChange={(e) => handleCostChange('wad', 'paid', e.target.value)}
+                                                />
+                                            </div>
+                                            <div className="form-group">
+                                                <label>Quantity</label>
+                                                <input 
+                                                    type="number"
+                                                    placeholder="500"
+                                                    value={costs.wad.quantity}
+                                                    onChange={(e) => handleCostChange('wad', 'quantity', e.target.value)}
+                                                />
+                                            </div>
+                                            <div className="form-group">
+                                                <label>Unit</label>
+                                                <select 
+                                                    value={costs.wad.unit}
+                                                    onChange={(e) => handleCostChange('wad', 'unit', e.target.value)}
+                                                >
+                                                    <option value="each">Each</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="empty-state">
+                                    <div className="empty-state-icon">🎯</div>
+                                    <p>Select a recipe to enter component costs</p>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Results Panel */}
+                        {selectedRecipe && (
+                            <div className="panel results-panel">
+                                <div className="panel-header">
+                                    <h2 className="panel-title">Cost Analysis</h2>
+                                </div>
+                                <div className="results-grid">
+                                    <div className="result-card">
+                                        <div className="result-label">Per Round</div>
+                                        <div className="result-value">${roundCost.toFixed(4)}</div>
+                                    </div>
+                                    <div className="result-card">
+                                        <div className="result-label">Box of 25</div>
+                                        <div className="result-value">${box25Cost.toFixed(2)}</div>
+                                    </div>
+                                    <div className="result-card">
+                                        <div className="result-label">100 Rounds</div>
+                                        <div className="result-value">${box100Cost.toFixed(2)}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* New Recipe Modal */}
+                    {showModal && (
+                        <div className="modal-overlay" onClick={() => setShowModal(false)}>
+                            <div className="modal" onClick={(e) => e.stopPropagation()}>
+                                <div className="modal-header">
+                                    <h3 className="modal-title">New Recipe</h3>
+                                    <button className="close-btn" onClick={() => setShowModal(false)}>×</button>
+                                </div>
+                                
+                                <div className="form-group">
+                                    <label>Recipe Name *</label>
+                                    <input 
+                                        type="text"
+                                        placeholder="e.g., 12ga Target Load, .308 Hunting"
+                                        value={newRecipe.name}
+                                        onChange={(e) => setNewRecipe({...newRecipe, name: e.target.value})}
+                                    />
+                                </div>
+
+                                <div className="form-group">
+                                    <label>Hull/Case per Round</label>
+                                    <input 
+                                        type="number"
+                                        value={newRecipe.hull}
+                                        onChange={(e) => setNewRecipe({...newRecipe, hull: e.target.value})}
+                                    />
+                                    <div className="info-text">Typically 1 per round</div>
+                                </div>
+
+                                <div className="form-group">
+                                    <label>Primer per Round</label>
+                                    <input 
+                                        type="number"
+                                        value={newRecipe.primer}
+                                        onChange={(e) => setNewRecipe({...newRecipe, primer: e.target.value})}
+                                    />
+                                    <div className="info-text">Typically 1 per round</div>
+                                </div>
+
+                                <div className="form-group">
+                                    <label>Powder (grains) *</label>
+                                    <input 
+                                        type="number"
+                                        step="0.1"
+                                        placeholder="e.g., 18.5"
+                                        value={newRecipe.powder}
+                                        onChange={(e) => setNewRecipe({...newRecipe, powder: e.target.value})}
+                                    />
+                                    <div className="info-text">Amount in grains per round</div>
+                                </div>
+
+                                <div className="form-group">
+                                    <label>Shot/Bullet (ounces) *</label>
+                                    <input 
+                                        type="number"
+                                        step="0.1"
+                                        placeholder="e.g., 1.125"
+                                        value={newRecipe.shot}
+                                        onChange={(e) => setNewRecipe({...newRecipe, shot: e.target.value})}
+                                    />
+                                    <div className="info-text">Amount in ounces per round</div>
+                                </div>
+
+                                <div className="form-group">
+                                    <label>Wad per Round</label>
+                                    <input 
+                                        type="number"
+                                        value={newRecipe.wad}
+                                        onChange={(e) => setNewRecipe({...newRecipe, wad: e.target.value})}
+                                    />
+                                    <div className="info-text">Typically 1 per round</div>
+                                </div>
+
+                                <button 
+                                    className="btn btn-primary" 
+                                    onClick={handleSaveRecipe}
+                                    style={{width: '100%', marginTop: '1rem'}}
+                                >
+                                    Save Recipe
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        ReactDOM.render(<ReloadingCalculator />, document.getElementById('root'));
+    </script>
+</body>
+</html>
